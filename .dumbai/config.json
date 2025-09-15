@@ -1,0 +1,135 @@
+{
+  "version": "1.0.0",
+  "description": "Central configuration for DUMBAI thresholds and deterministic values",
+
+  "thresholds": {
+    "escalation": {
+      "lintErrors": 10,
+      "typeErrors": 1,
+      "testFailures": 1,
+      "buildFailures": 1
+    },
+    "fastlane": {
+      "maxMissions": 1,
+      "maxFiles": 3,
+      "maxLoC": 100,
+      "maxPackages": 1
+    },
+    "workBurst": {
+      "maxFiles": 1,
+      "maxLoC": 150,
+      "maxFunctions": 3,
+      "maxTestSuites": 1,
+      "guidelineMinutes": 30
+    },
+    "readScope": {
+      "implementationSpecialist": {
+        "maxHops": 3,
+        "description": "Import graph traversal depth"
+      },
+      "coordinator": {
+        "scope": "cross-mission",
+        "description": "Can read across missions for dependencies"
+      },
+      "supervisor": {
+        "scope": "full-codebase",
+        "description": "Unrestricted read access"
+      }
+    }
+  },
+
+  "scoring": {
+    "approachSelection": {
+      "weights": {
+        "complexity": 2,
+        "risk": 3,
+        "maintenance": 1
+      },
+      "rubrics": {
+        "complexity": {
+          "description": "Based on calculateComplexity() output",
+          "< 5": 1,
+          "5-9": 2,
+          "10-19": 3,
+          "20-29": 5,
+          "30-49": 7,
+          ">= 50": 10
+        },
+        "risk": {
+          "Well-tested pattern": 1,
+          "Common approach": 2,
+          "Some unknowns": 4,
+          "New technology": 6,
+          "Breaking changes": 8,
+          "Experimental": 10
+        },
+        "maintenance": {
+          "No maintenance": 1,
+          "Managed service": 2,
+          "Standard library": 3,
+          "Custom code, simple": 5,
+          "Custom code, complex": 7,
+          "Custom infrastructure": 10
+        }
+      }
+    }
+  },
+
+  "ambiguity": {
+    "detection": {
+      "maxPossibleLocations": 2,
+      "requireMatchingPatterns": true,
+      "maxConflictingPatterns": 0
+    }
+  },
+
+  "complexity": {
+    "calculation": {
+      "weights": {
+        "filesCount": 1,
+        "locPer50": 1,
+        "packagesAffected": 3,
+        "externalAPIs": 5
+      }
+    }
+  },
+
+  "research": {
+    "decisionMatrix": {
+      "USE": {
+        "minApiFit": 90,
+        "minWeeklyDownloads": 10000,
+        "maxVulnerabilities": 0
+      },
+      "WRAP": {
+        "minApiFit": 70,
+        "maxApiFit": 89
+      },
+      "BUILD": {
+        "description": "When no package meets USE or WRAP criteria"
+      }
+    }
+  },
+
+  "validation": {
+    "commandChain": [
+      {
+        "check": "scripts.validate exists",
+        "command": "yarn validate"
+      },
+      {
+        "check": "scripts.typecheck AND scripts.lint exist",
+        "command": "yarn typecheck && yarn lint"
+      },
+      {
+        "check": "tsconfig.json exists",
+        "command": "tsc --noEmit"
+      },
+      {
+        "check": "none of above",
+        "action": "escalate",
+        "tag": "@tool-failure"
+      }
+    ]
+  }
+}
