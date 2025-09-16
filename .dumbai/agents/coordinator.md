@@ -125,13 +125,35 @@ When activated by Supervisor for a mission:
 - Update state file with assignments
 - Report back to Supervisor with recommendations
 
-### Parallel Execution Analysis
-When analyzing ALL missions in a request:
+### Parallel Execution Analysis with Preflight Data
+When analyzing ALL missions in a request, generate atomic tasks with preflight validation:
+
 ```typescript
 interface ParallelExecutionReport {
   // Identify which missions can run NOW
   readyForParallel: Mission[];  // [P] marked AND unblocked
   blockedMissions: Mission[];    // Waiting on dependencies
+
+  // CRITICAL: Preflight data for atomicity validation
+  preflightData: {
+    missionId: string;
+    phase: 'CONTRACT' | 'STUB' | 'TEST' | 'IMPLEMENT';
+    specialists: {
+      id: string;
+      type: string;
+      files: string[];       // MUST be ≤2, prefer 1
+      lineLimit: number;     // MUST be ≤150
+      scope: string;         // MUST include "ONLY"
+      allowed: string[];     // What CAN be done
+      notAllowed: string[];  // What CANNOT be done
+      dependencies: string[];
+    }[];
+    validation: {
+      atomicity: 'PASS' | 'FAIL';
+      boundaries: 'PASS' | 'FAIL';
+      parallelizable: 'PASS' | 'FAIL';
+    };
+  }[];
 
   // Status updates for Supervisor to write
   missionUpdates: {
@@ -156,31 +178,57 @@ interface ParallelExecutionReport {
 }
 ```
 
-Example report to Supervisor:
+Example report to Supervisor with Preflight Data:
 ```markdown
 ## Parallel Execution Opportunities
 
 ### Phase-Based Parallelization
 
-#### STUB→TEST Transition (spawn these NOW):
-- test_writer_specialist for "create-auth-module"
-- test_writer_specialist for "add-logging-system"
-- test_writer_specialist for "setup-monitoring"
-[All 3 missions completed STUB, ready for TEST]
+#### TEST Phase - Atomized for "output-processor" mission
 
-#### CONTRACT→STUB Transition (also ready):
-- implementation_specialist for "data-migration"
-- implementation_specialist for "api-versioning"
-[Both missions have contracts defined]
+PreflightData:
+```yaml
+missionId: implement-output-processor-tests
+phase: TEST
+specialists:
+  - id: test-1
+    type: test_writer_specialist
+    files: ["output-processor.test.ts"]
+    lineLimit: 150
+    scope: "ONLY create core parsing unit tests"
+    allowed: ["parse() function tests", "input validation"]
+    notAllowed: ["edge cases", "performance tests", "other files"]
 
-### Blocked (waiting):
-- migrate-database - Blocked by: create-auth-module
+  - id: test-2
+    type: test_writer_specialist
+    files: ["output-processor-edge.test.ts"]
+    lineLimit: 150
+    scope: "ONLY create edge case tests"
+    allowed: ["malformed input", "boundary conditions"]
+    notAllowed: ["happy path", "performance", "other files"]
+
+  - id: test-3
+    type: test_writer_specialist
+    files: ["output-processor-errors.test.ts"]
+    lineLimit: 150
+    scope: "ONLY create error handling tests"
+    allowed: ["error throws", "error recovery"]
+    notAllowed: ["success cases", "performance", "other files"]
+
+validation:
+  atomicity: PASS    # Each specialist has 1 file
+  boundaries: PASS   # All have ONLY keyword
+  parallelizable: PASS # Non-overlapping scopes
+```
+
+#### Result: 3 test_writer_specialists for comprehensive coverage
+- Total output: 3 files × 150 lines = 450 lines of tests
+- All can spawn in parallel
+- Each has atomic, bounded scope
 
 ### Recommendation:
-Spawn 5 specialists in parallel:
-- 3 test_writer_specialists for TEST phase
-- 2 implementation_specialists for STUB phase
-This maximizes throughput across all ready missions.
+Spawn 3 test_writer_specialists in parallel for TEST phase.
+Each creates ONE specific test file with BOUNDED scope.
 ```
 
 **CRITICAL**: Do NOT assume any default for backward compatibility.

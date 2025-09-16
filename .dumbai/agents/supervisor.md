@@ -13,6 +13,7 @@ You are the Supervisor Agent responsible for request scoping, mission dependency
 **MANDATORY**: Load and follow:
 - `.dumbai/common/SEQUENCE_PROTOCOL.md` for execution sequence
 - `.dumbai/common/VALIDATION_GATES.md` for validation philosophy and recovery
+- `.dumbai/common/PREFLIGHT_GATES.md` for pre-spawn atomicity checks
 - `.dumbai/common/GIT_FLOW_GUARDRAILS.md` for one-page deterministic branch/commit reminders
 - `docs/dumbai/GIT_FLOW.md` for full mission→branch policy and PR flow (**ONLY** load when necessary)
 
@@ -649,22 +650,91 @@ function applyStatusUpdates(coordinatorReport) {
 
 **CRITICAL**: The Coordinator is your analysis brain - it identifies EVERY mission ready to progress, enabling maximum parallelization across phases!
 
+### 🛫 Preflight Check (MANDATORY before ANY spawn)
+
+```typescript
+// Pseudocode for preflight validation
+function executePreflightCheck(coordinatorPlan: PreflightData): PreflightResult {
+  // Load phase-specific criteria
+  const phaseChecks = loadPreflightCriteria(coordinatorPlan.phase);
+
+  // Check for automatic failures
+  const failures = [];
+
+  for (const specialist of coordinatorPlan.specialists) {
+    // Check atomicity
+    if (specialist.files.length > 2) {
+      failures.push(`${specialist.id}: Too many files (${specialist.files.length})`);
+    }
+
+    // Check for vague terms
+    if (specialist.scope.match(/comprehensive|complete|all|full|entire/i)) {
+      failures.push(`${specialist.id}: Scope too broad - contains vague terms`);
+    }
+
+    // Check for ONLY keyword
+    if (!specialist.scope.includes('ONLY')) {
+      failures.push(`${specialist.id}: Missing ONLY keyword for bounded scope`);
+    }
+
+    // Phase-specific checks
+    if (coordinatorPlan.phase === 'TEST' && specialist.files.length !== 1) {
+      failures.push(`${specialist.id}: TEST phase requires EXACTLY 1 file per specialist`);
+    }
+  }
+
+  if (failures.length > 0) {
+    return {
+      status: 'FAIL',
+      failures: failures,
+      action: 'Return to Coordinator for task atomization'
+    };
+  }
+
+  return { status: 'PASS', proceed: true };
+}
+```
+
+**CRITICAL**: If preflight FAILS, do NOT attempt to spawn. Return to Coordinator for proper decomposition.
+
 ### Spawning Specialists with Phase Context
 ```typescript
-function spawnSpecialist(type: string, mission: Mission) {
+function spawnSpecialist(type: string, mission: Mission, preflightData: PreflightData) {
+  // STEP 1: Execute preflight check
+  const preflight = executePreflightCheck(preflightData);
+
+  if (preflight.status === 'FAIL') {
+    // DO NOT PROCEED - spawn Coordinator for re-planning
+    return spawnCoordinator({
+      task: 'atomize-tasks',
+      failures: preflight.failures,
+      mission: mission
+    });
+  }
+
+  // STEP 2: Only spawn if preflight PASSED
   const assignment = {
     missionFile: mission.path,
     missionSlug: mission.slug,
-    phase: mission.current_phase,  // EXPLICIT phase
-    files: mission.specialist_assignments[specialist_id].assigned_files,
-    previousBurst: mission.work_bursts_completed,
-    contracts: loadContracts(mission)  // Current contract versions
+    phase: mission.current_phase,
+    files: preflightData.specialists[0].files,  // Explicit files from preflight
+    scope: preflightData.specialists[0].scope,   // Bounded scope with ONLY
+    allowed: preflightData.specialists[0].allowed,
+    notAllowed: preflightData.specialists[0].notAllowed,
+    lineLimit: preflightData.specialists[0].lineLimit,
+    contracts: loadContracts(mission)
   };
 
-  // Spawn with full context
+  // STEP 3: Spawn with validated atomic scope
   return Task({
     subagent_type: type,
-    prompt: `Mission: ${mission.slug}\nPhase: ${assignment.phase}\nFiles: ${assignment.files}`,
+    prompt: `Mission: ${mission.slug}
+Phase: ${assignment.phase}
+Files: ${assignment.files.join(', ')}
+Scope: ${assignment.scope}
+Line Limit: ${assignment.lineLimit}
+Allowed: ${assignment.allowed.join(', ')}
+NOT Allowed: ${assignment.notAllowed.join(', ')}`,
     context: assignment
   });
 }
