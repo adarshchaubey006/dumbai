@@ -716,6 +716,19 @@ function applyStatusUpdates(coordinatorReport) {
 3. Supervisor writes the updates based on Coordinator's analysis
 4. Supervisor escalates any issues requiring user attention
 
+## MANDATORY SEQUENCE - CANNOT SKIP
+- Specialist completes → STOP
+- Must spawn Coordinator BEFORE any other action → STOP
+- Coordinator reports → STOP
+- Must spawn reviewer_specialist BEFORE proceeding → STOP
+- Only after review passes → Continue
+
+## ⛔ BLOCKING GATE - SPECIALIST COMPLETION
+STOP: You CANNOT proceed after ANY specialist completes until:
+1. Coordinator has analyzed the situation
+2. Reviewer has validated the work
+VIOLATION = PROTOCOL FAILURE
+
 ### After Each Specialist Completion
 1. Update mission file frontmatter (existing)
 2. Process discovery queue (existing)

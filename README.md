@@ -1,5 +1,9 @@
 # DUMBAI - Because AI Agents Are Actually Dumb
 
+<div align="center">
+  <img src="assets/dumbai.svg" alt="DUMBAI Logo" width="50%">
+</div>
+
 **Deterministic Unified Management of Behavioral AI agents**
 
 A framework that finally admits what we all know: AI agents are dumb. Instead of fighting this reality, DUMBAI embraces it by treating AI agents like interns who need extremely specific instructions, can't be trusted with sharp objects, and will definitely delete your production database if you let them.
