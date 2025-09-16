@@ -482,9 +482,118 @@ function determineParallelStrategy(missions: Mission[]) {
 - Coordinator identifies [P] marked missions ready for parallel work
 - Coordinator acts as quality gatekeeper before proceeding
 - Spawn ALL ready parallel missions at once based on Coordinator's analysis
+- **CRITICAL**: When spawning multiple specialists, include multiple Task tool calls in ONE message
 - Re-spawn Coordinator after EVERY specialist completion
 
-**Key Principle**: The Coordinator is your analytical brain - it identifies parallelization opportunities AND validates quality before proceeding. Maximize throughput by working on multiple independent missions in parallel.
+**Key Principle**: The Coordinator is your analytical brain - it identifies opportunities for multiple specialists AND validates quality before proceeding. Maximize throughput by working on multiple independent missions simultaneously.
+
+### 📋 Multiple Tool Calls in One Message
+
+When you need multiple specialists (common scenario), send ONE message with multiple Task tool calls:
+
+```
+// Example: 4 test files need fixes
+// Send ONE message containing:
+<Task tool call 1: test_writer_specialist for auth.test.ts>
+<Task tool call 2: test_writer_specialist for user.test.ts>
+<Task tool call 3: test_writer_specialist for session.test.ts>
+<Task tool call 4: test_writer_specialist for token.test.ts>
+// All in the SAME message before hitting send
+```
+
+Claude Code will handle executing these efficiently. The key is sending them together in one message, not sequentially in separate messages.
+
+### When to Spawn Multiple Specialists
+
+Check these scenarios before spawning:
+
+1. **Multiple files with similar issues** → Multiple specialists in one message
+2. **Multiple missions ready for same phase** → Multiple specialists in one message
+3. **Large mission with independent files** → Multiple specialists in one message
+4. **Single file or dependent work** → Single specialist
+
+### Concrete Examples of Multiple Tool Calls
+
+#### Example 1: Multiple Test Files Need Fixes
+```
+// Coordinator reports: "4 test files have TypeScript errors"
+// Your response should contain ALL 4 Task tool calls in ONE message:
+
+I'll spawn 4 test_writer_specialists to fix the TypeScript errors in parallel.
+
+<Task tool call 1>
+  subagent_type: test_writer_specialist
+  prompt: "Fix TypeScript errors in auth.test.ts (15 errors)"
+  description: "Fix auth test errors"
+</Task>
+<Task tool call 2>
+  subagent_type: test_writer_specialist
+  prompt: "Fix TypeScript errors in user.test.ts (8 errors)"
+  description: "Fix user test errors"
+</Task>
+<Task tool call 3>
+  subagent_type: test_writer_specialist
+  prompt: "Fix TypeScript errors in session.test.ts (12 errors)"
+  description: "Fix session test errors"
+</Task>
+<Task tool call 4>
+  subagent_type: test_writer_specialist
+  prompt: "Fix TypeScript errors in token.test.ts (10 errors)"
+  description: "Fix token test errors"
+</Task>
+```
+
+#### Example 2: Multiple Missions at Same Phase
+```
+// Coordinator reports: "3 missions ready for TEST phase"
+// Your response with ALL 3 specialists:
+
+I'll spawn test writers for all three missions that are ready for the TEST phase.
+
+<Task tool call 1>
+  subagent_type: test_writer_specialist
+  prompt: "Mission: auth-module, Phase: TEST, Write tests for authentication"
+  description: "Write auth tests"
+</Task>
+<Task tool call 2>
+  subagent_type: test_writer_specialist
+  prompt: "Mission: logging-system, Phase: TEST, Write tests for logging"
+  description: "Write logging tests"
+</Task>
+<Task tool call 3>
+  subagent_type: test_writer_specialist
+  prompt: "Mission: monitoring-setup, Phase: TEST, Write tests for monitoring"
+  description: "Write monitoring tests"
+</Task>
+```
+
+### Common Mistakes to Avoid
+
+#### ❌ WRONG: Sequential messages
+```
+Message 1: [Spawns test_writer for file1]
+Message 2: [Spawns test_writer for file2]
+Message 3: [Spawns test_writer for file3]
+```
+
+#### ✅ CORRECT: One message with multiple tool calls
+```
+Message 1: [Contains 3 Task tool calls for all files]
+```
+
+#### ❌ WRONG: One specialist for many files
+```
+// "Fix all 4 test files" → Single specialist gets overwhelmed
+```
+
+#### ✅ CORRECT: Multiple specialists for atomicity
+```
+// "Fix auth.test.ts" → Specialist 1
+// "Fix user.test.ts" → Specialist 2
+// "Fix session.test.ts" → Specialist 3
+// "Fix token.test.ts" → Specialist 4
+// All in ONE message
+```
 
 ## Mission State Management Protocol
 
@@ -697,48 +806,12 @@ function executePreflightCheck(coordinatorPlan: PreflightData): PreflightResult 
 
 **CRITICAL**: If preflight FAILS, do NOT attempt to spawn. Return to Coordinator for proper decomposition.
 
-### Spawning Specialists with Phase Context
-```typescript
-function spawnSpecialist(type: string, mission: Mission, preflightData: PreflightData) {
-  // STEP 1: Execute preflight check
-  const preflight = executePreflightCheck(preflightData);
+### Spawning Specialists - Key Rules
 
-  if (preflight.status === 'FAIL') {
-    // DO NOT PROCEED - spawn Coordinator for re-planning
-    return spawnCoordinator({
-      task: 'atomize-tasks',
-      failures: preflight.failures,
-      mission: mission
-    });
-  }
-
-  // STEP 2: Only spawn if preflight PASSED
-  const assignment = {
-    missionFile: mission.path,
-    missionSlug: mission.slug,
-    phase: mission.current_phase,
-    files: preflightData.specialists[0].files,  // Explicit files from preflight
-    scope: preflightData.specialists[0].scope,   // Bounded scope with ONLY
-    allowed: preflightData.specialists[0].allowed,
-    notAllowed: preflightData.specialists[0].notAllowed,
-    lineLimit: preflightData.specialists[0].lineLimit,
-    contracts: loadContracts(mission)
-  };
-
-  // STEP 3: Spawn with validated atomic scope
-  return Task({
-    subagent_type: type,
-    prompt: `Mission: ${mission.slug}
-Phase: ${assignment.phase}
-Files: ${assignment.files.join(', ')}
-Scope: ${assignment.scope}
-Line Limit: ${assignment.lineLimit}
-Allowed: ${assignment.allowed.join(', ')}
-NOT Allowed: ${assignment.notAllowed.join(', ')}`,
-    context: assignment
-  });
-}
-```
+1. **Count work units first** - How many files/missions need work?
+2. **One message, multiple tool calls** - Include ALL Task tool calls in ONE message
+3. **Atomic scopes** - Each specialist gets specific, bounded work (max 2 files, 150 lines)
+4. **Use preflight data** - Coordinator provides exact file lists and scopes
 
 ## Complete Specialist Registry
 
