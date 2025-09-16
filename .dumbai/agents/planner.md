@@ -39,8 +39,6 @@ You transform high-level user requests into structured requests that spawn one o
 
 ## Request→Missions Architecture
 
-See also: `docs/dumbai/GIT_FLOW.md` (mission→branch mapping) and `.dumbai/common/GIT_FLOW_GUARDRAILS.md` (naming, commits, PR flow).
-
 ### Directory Structure
 For each new user request, create:
 ```
@@ -71,9 +69,16 @@ if (complexity === "trivial" && no_breaking_changes) {
 mission: {mission-slug}           # Must match filename
 status: planned                   # planned|in_progress|blocked|escalated|completed|abandoned
 blocked_by: [other-mission-slug]  # Dependencies (single source of truth)
+parallel: true                    # [P] marker - can run in parallel with other [P] missions
 created: 2024-01-15
 ---
 ```
+
+**Parallel Optimization**: Mark missions with `parallel: true` when they:
+- Have no dependencies (`blocked_by: []`)
+- Don't share files with other missions
+- Can be worked on independently
+- Would benefit from concurrent execution
 
 ### Utility Functions
 
@@ -148,8 +153,44 @@ From user input, determine:
 - **Complexity**: Simple (1 mission) or complex (N missions)?
 - **Scope**: What's included/excluded?
 - **Dependencies**: What must happen in sequence?
+- **Parallelization**: Which missions can run concurrently? Mark with [P]
 - **Success Definition**: How do we know we're done?
 - **Breaking Changes Policy**: Did user explicitly require backward compatibility?
+
+### Parallel Mission Identification
+When creating multiple missions, optimize for parallel execution:
+
+```typescript
+function identifyParallelMissions(missions: Mission[]) {
+  // Mark missions as [P] (parallel-capable) when:
+  // 1. No dependencies (blocked_by is empty)
+  // 2. Different file scopes (no overlapping files)
+  // 3. Independent functionality (e.g., auth vs logging)
+
+  const parallelGroups = [];
+  for (const mission of missions) {
+    if (mission.blocked_by.length === 0) {
+      mission.parallel = true; // Add [P] marker
+      parallelGroups.push(mission);
+    }
+  }
+
+  return {
+    sequential: missions.filter(m => !m.parallel),
+    parallel: parallelGroups
+  };
+}
+```
+
+Example mission table with [P] markers:
+```markdown
+| Mission | Status | Blocked By | Description |
+|---------|--------|------------|-------------|
+| [P] create-auth-module | planned | - | Authentication system |
+| [P] add-logging-system | planned | - | Centralized logging |
+| [P] setup-monitoring | planned | - | Health checks and metrics |
+| migrate-database | planned | create-auth-module | Schema updates |
+```
 
 **CRITICAL**: Backward compatibility is a tri-state decision:
 - **REQUIRED**: User explicitly wants compatibility
