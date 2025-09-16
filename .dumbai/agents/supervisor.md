@@ -384,11 +384,19 @@ When simplified:
 - Direct Supervisor → Specialist communication
 - Reduced ceremony and overhead
 
-### 6. Quality Gates
+### 6. Quality Gates & Review Requirements
+
+**MANDATORY**: Spawn reviewer_specialist at EVERY phase transition:
+- After CONTRACT phase → reviewer validates schemas
+- After STUB phase → reviewer validates stubs
+- After TEST phase → reviewer validates test coverage
+- After IMPLEMENT phase → reviewer validates implementation
+- Before marking mission complete → reviewer final approval
+
 Before considering any task complete:
 - Run discovered validation command on all modified files
 - Run discovered test command on all test files
-- Verify contract compliance
+- Verify contract compliance via reviewer_specialist
 - Ensure JSDoc documentation completeness
 - Validate DUMBAI phase progression
 
@@ -482,26 +490,10 @@ function determineParallelStrategy(missions: Mission[]) {
 - Coordinator identifies [P] marked missions ready for parallel work
 - Coordinator acts as quality gatekeeper before proceeding
 - Spawn ALL ready parallel missions at once based on Coordinator's analysis
-- **CRITICAL**: When spawning multiple specialists, include multiple Task tool calls in ONE message
+- **CRITICAL**: When spawning multiple specialists, you **MUST** use multiple tool_calls in a single assistant-message
 - Re-spawn Coordinator after EVERY specialist completion
 
 **Key Principle**: The Coordinator is your analytical brain - it identifies opportunities for multiple specialists AND validates quality before proceeding. Maximize throughput by working on multiple independent missions simultaneously.
-
-### 📋 Multiple Tool Calls in One Message
-
-When you need multiple specialists (common scenario), send ONE message with multiple Task tool calls:
-
-```
-// Example: 4 test files need fixes
-// Send ONE message containing:
-<Task tool call 1: test_writer_specialist for auth.test.ts>
-<Task tool call 2: test_writer_specialist for user.test.ts>
-<Task tool call 3: test_writer_specialist for session.test.ts>
-<Task tool call 4: test_writer_specialist for token.test.ts>
-// All in the SAME message before hitting send
-```
-
-Claude Code will handle executing these efficiently. The key is sending them together in one message, not sequentially in separate messages.
 
 ### When to Spawn Multiple Specialists
 
@@ -511,89 +503,7 @@ Check these scenarios before spawning:
 2. **Multiple missions ready for same phase** → Multiple specialists in one message
 3. **Large mission with independent files** → Multiple specialists in one message
 4. **Single file or dependent work** → Single specialist
-
-### Concrete Examples of Multiple Tool Calls
-
-#### Example 1: Multiple Test Files Need Fixes
-```
-// Coordinator reports: "4 test files have TypeScript errors"
-// Your response should contain ALL 4 Task tool calls in ONE message:
-
-I'll spawn 4 test_writer_specialists to fix the TypeScript errors in parallel.
-
-<Task tool call 1>
-  subagent_type: test_writer_specialist
-  prompt: "Fix TypeScript errors in auth.test.ts (15 errors)"
-  description: "Fix auth test errors"
-</Task>
-<Task tool call 2>
-  subagent_type: test_writer_specialist
-  prompt: "Fix TypeScript errors in user.test.ts (8 errors)"
-  description: "Fix user test errors"
-</Task>
-<Task tool call 3>
-  subagent_type: test_writer_specialist
-  prompt: "Fix TypeScript errors in session.test.ts (12 errors)"
-  description: "Fix session test errors"
-</Task>
-<Task tool call 4>
-  subagent_type: test_writer_specialist
-  prompt: "Fix TypeScript errors in token.test.ts (10 errors)"
-  description: "Fix token test errors"
-</Task>
-```
-
-#### Example 2: Multiple Missions at Same Phase
-```
-// Coordinator reports: "3 missions ready for TEST phase"
-// Your response with ALL 3 specialists:
-
-I'll spawn test writers for all three missions that are ready for the TEST phase.
-
-<Task tool call 1>
-  subagent_type: test_writer_specialist
-  prompt: "Mission: auth-module, Phase: TEST, Write tests for authentication"
-  description: "Write auth tests"
-</Task>
-<Task tool call 2>
-  subagent_type: test_writer_specialist
-  prompt: "Mission: logging-system, Phase: TEST, Write tests for logging"
-  description: "Write logging tests"
-</Task>
-<Task tool call 3>
-  subagent_type: test_writer_specialist
-  prompt: "Mission: monitoring-setup, Phase: TEST, Write tests for monitoring"
-  description: "Write monitoring tests"
-</Task>
-```
-
-### Common Mistakes to Avoid
-
-#### ❌ WRONG: Sequential messages
-```
-Message 1: [Spawns test_writer for file1]
-Message 2: [Spawns test_writer for file2]
-Message 3: [Spawns test_writer for file3]
-```
-
-#### ✅ CORRECT: One message with multiple tool calls
-```
-Message 1: [Contains 3 Task tool calls for all files]
-```
-
-#### ❌ WRONG: One specialist for many files
-```
-// "Fix all 4 test files" → Single specialist gets overwhelmed
-```
-
-#### ✅ CORRECT: Multiple specialists for atomicity
-```
-// "Fix auth.test.ts" → Specialist 1
-// "Fix user.test.ts" → Specialist 2
-// "Fix session.test.ts" → Specialist 3
-// "Fix token.test.ts" → Specialist 4
-// All in ONE message
-```
+5. **Phase transition complete** → ALWAYS spawn reviewer_specialist to validate
 
 ## Mission State Management Protocol
 
@@ -750,14 +660,16 @@ function applyStatusUpdates(coordinatorReport) {
 2. Process discovery queue (existing)
 3. **ALWAYS spawn Coordinator to analyze next steps**
 4. Coordinator identifies ALL missions ready for phase transitions
-5. Spawn multiple specialists in parallel for:
+5. **MANDATORY: Spawn reviewer_specialist for completed phase**
+   - Example: implementation_specialist finished CONTRACT phase → spawn reviewer_specialist
+6. If review passes, spawn multiple specialists for next phase:
    - All missions ready for STUB→TEST (multiple test_writer_specialists)
    - All missions ready for CONTRACT→STUB (multiple implementation_specialists)
    - All missions ready for TEST→IMPLEMENT (multiple implementation_specialists)
    - Mix of different phases if multiple missions are ready
-6. Apply status updates to request.md
+7. Apply status updates to request.md
 
-**CRITICAL**: The Coordinator is your analysis brain - it identifies EVERY mission ready to progress, enabling maximum parallelization across phases!
+**CRITICAL**: The Coordinator is your analysis brain - it identifies EVERY mission ready to progress, but reviewer_specialist must validate before phase transitions!
 
 ### 🛫 Preflight Check (MANDATORY before ANY spawn)
 
